@@ -2,6 +2,7 @@
 using System.Runtime.Serialization;
 using System.Runtime.Serialization.Json;
 using LibGit2Sharp;
+using System.IO;
 
 namespace UpdateRepoWithMinolData
 {
@@ -22,26 +23,40 @@ namespace UpdateRepoWithMinolData
 
         static void Main(string[] args)
         {
-            if (args != null && args.Length > 0)
+            try
             {
-                gitFolder = args[0];
+
+                if (args != null && args.Length > 0)
+                {
+                    gitFolder = args[0];
+                }
+                //WriteSettings(gitFolder);
+                //return;
+                var login = ReadSettings(gitFolder);
+
+                var folders = System.IO.Directory.GetDirectories(gitFolder, "brfskagagard-lgh*");
+                Signature author = new Signature(login.AuthorName, login.AuthorEmail, DateTime.Now);
+
+                foreach (string folder in folders)
+                {
+                    SyncRepository(folder, login.Token, author);
+                }
+
+                var styrelsenDirectory = new System.IO.DirectoryInfo(gitFolder + "brfskagagard-styrelsen");
+                if (styrelsenDirectory.Exists)
+                {
+                    SyncRepository(styrelsenDirectory.FullName, login.Token, author);
+                }
             }
-            //WriteSettings(gitFolder);
-            //return;
-            var login = ReadSettings(gitFolder);
-
-            var folders = System.IO.Directory.GetDirectories(gitFolder, "brfskagagard-lgh*");
-            Signature author = new Signature(login.AuthorName, login.AuthorEmail, DateTime.Now);
-
-            foreach (string folder in folders)
+            catch (Exception ex)
             {
-                SyncRepository(folder, login.Token, author);
-            }
+                using (var stream = File.CreateText(gitFolder + "updaterepo-last-error.txt"))
+                {
+                    stream.Write(ex.ToString());
+                    stream.Flush();
+                }
 
-            var styrelsenDirectory = new System.IO.DirectoryInfo(gitFolder + "brfskagagard-styrelsen");
-            if (styrelsenDirectory.Exists)
-            {
-                SyncRepository(styrelsenDirectory.FullName, login.Token, author);
+                throw;
             }
         }
 
